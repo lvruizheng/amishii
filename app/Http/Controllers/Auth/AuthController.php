@@ -8,6 +8,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\ThrottlesLogins;
 use Illuminate\Foundation\Auth\AuthenticatesAndRegistersUsers;
 
+use Illuminate\Http\Request;
+use Cookie;
+use Crypt;
+use Config;
+
 class AuthController extends Controller
 {
     /*
@@ -68,5 +73,45 @@ class AuthController extends Controller
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
         ]);
+    }
+    
+    //登陆页面
+    public function showLoginForm(Request $request)
+    {
+        $arr = array('status'=>'200');
+        $reque = $request->all();
+        $rules    = [
+            'callback'     => 'required',
+            'details'      => 'required',
+            '_secret'      => 'required',
+        ];
+    
+        $v = Validator::make($reque, $rules);
+    
+        if ($v->fails()) {
+            $arr['status'] = 3;
+            return response($reque['callback'].'('.json_encode($arr).')');
+        }
+    
+        $user_cont = Crypt::decrypt($reque['details']);
+    
+        //验证是否有效
+        if($reque['_secret'] != MD5(array_push($user_cont,Config::get('constants.auth_secret')))){
+            $arr['status'] = 2;
+            return response($reque['callback'].'('.json_encode($arr).')');die;
+        }
+    
+        return response($reque['callback'].'('.json_encode($arr).')')->withCookie(Cookie::forever('nk', $user_cont['nk']))->withCookie(Cookie::forever('uid',$user_cont['uid']));
+    }
+    
+    /**
+     * 登出
+     */
+    public function logout(Request $request)
+    {
+        $reque = $request->all();
+        $arr = array('status'=>'200');
+    
+        return response($reque['callback'].'('.json_encode($arr).')')->withCookie(Cookie::forget('nk'))->withCookie(Cookie::forget('uid'));
     }
 }
