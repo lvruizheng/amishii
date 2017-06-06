@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Cookie;
 use Crypt;
 use Config;
+use \Common\Common;
 
 class AuthController extends Controller
 {
@@ -96,7 +97,8 @@ class AuthController extends Controller
         $user_cont = Crypt::decrypt($reque['details']);
     
         //验证是否有效
-        if($reque['_secret'] != MD5(array_push($user_cont,Config::get('constants.auth_secret')))){
+        $new_secret = MD5($reque['details'].Common::$auth_secret);
+        if($reque['_secret'] != $new_secret){
             $arr['status'] = 2;
             return response($reque['callback'].'('.json_encode($arr).')');die;
         }
